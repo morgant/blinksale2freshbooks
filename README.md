@@ -52,6 +52,7 @@ REFERENCE
 * http://guides.rubygems.org/make-your-own-gem/#documenting-your-code
 * https://bundler.io/v1.13/guides/creating_gem
 * https://blog.codeship.com/exploring-structure-ruby-gems/
+* http://lizabinante.com/blog/creating-a-configurable-ruby-gem/
 * https://stackoverflow.com/a/10112179
 
 LICENSE
