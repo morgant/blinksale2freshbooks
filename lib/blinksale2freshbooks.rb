@@ -8,8 +8,34 @@ module Blinksale2FreshBooks
   def self.connect
     puts "Connecting to Blinksale..."
     @blinksale = Blinksale.new(@configuration.blinksale_id, @configuration.blinksale_username, @configuration.blinksale_password)
+  end
+  
+  def self.all_blinksale_clients
+    @blinksale.clients
+  end
+  
+  def self.all_blinksale_invoices
+    @blinksale.invoices(status: :all, start: "2006-01-01")  # the Blinksale API was first released in 2006, so presumably that should cover all invoices, but could make it a config option if necessary
+  end
+  
+  def self.migrate(dry_run)
+    puts "Migrating from #{@blinksale.host}..."
     
-    puts "Clients: #{@blinksale.clients.count}"
-    puts "Invoices: #{@blinksale.invoices.count}"
+    clients = all_blinksale_clients
+    puts "#{clients.count} clients..."
+    clients.each do |client|
+      puts "\t'#{client.name}'..."
+      if client.people.length > 0
+        client.people.each do |person|
+          puts "\t\t'#{person.first_name} #{person.last_name}'..."
+        end
+      end
+    end
+    
+    invoices = all_blinksale_invoices
+    puts "#{invoices.count} invoices..."
+    invoices.each do |invoice|
+      puts "\t#{invoice.number} (#{invoice.date}; #{invoice.status})..."
+    end
   end
 end

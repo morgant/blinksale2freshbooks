@@ -37,4 +37,5 @@ if options.has_key?(:blinksale_id) && options.has_key?(:blinksale_user) && optio
     config.blinksale_password = options[:blinksale_pass]
   end
   Blinksale2FreshBooks.connect
+  Blinksale2FreshBooks.migrate(options[:dry_run])
 end
