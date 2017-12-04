@@ -8,4 +8,5 @@ RSpec.describe Blinksale2FreshBooks do
   it "has a configuration" do
     expect(Blinksale2FreshBooks::configuration).not_to be nil
   end
+  
 end

@@ -8,4 +8,12 @@ RSpec.configure do |config|
   config.expect_with :rspec do |c|
     c.syntax = :expect
   end
+  
+  config.before(:all) do
+    Blinksale2FreshBooks.configure do |config|
+      config.blinksale_id = ENV['BS2FB_BLINKSALE_ID']
+      config.blinksale_username = ENV['BS2FB_BLINKSALE_USER']
+      config.blinksale_password = ENV['BS2FB_BLINKSALE_PASS']
+    end
+  end
 end
