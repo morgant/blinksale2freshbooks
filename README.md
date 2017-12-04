@@ -27,7 +27,31 @@ Or install it yourself as:
 USAGE
 -----
 
-TODO: Write usage instructions here
+There are two ways to use this:
+
+1) Include & use the module in your own ruby script/project
+2) Use the `blinksale2freshbooks` CLI tool
+
+### The Ruby Module
+
+1) Require `blinksale2freshbooks` in your code:  
+  require 'blinksale2freshbooks`  
+2) Configure the module with your Blinksale & FreshBooks accounts:  
+  Blinksale2FreshBooks.configure do |config|  
+    config.blinksale_id = "your_blinksale_company_id"  
+    config.blinksale_username = "your_account@example.com"  
+    config.blinksale_password = "some_password"  
+  end  
+3) Call the `connect` method to open the connection to Blinksale & FreshBooks:  
+  Blinksale2FreshBooks.connect  
+4) Call the `migrate` method to migrate data from Blinksale to FreshBooks:  
+  Blinksale2FreshBooks.migrate(true)  # specify true for dry-run (no changes will be made to FreshBooks or false to apply changes)
+
+### The `blinksale2freshbooks` CLI Tool
+
+Run `bin/blinksale2freshbooks -h` for all options, but a basic migration would be run as follows (you can remove the `--dry-run` option to allow changes to be made to FreshBooks):
+
+  bin/blinksale2freshbooks --blinksale-id "your_blinksale_company_id" --blinksale-user "your_account@example.com" --blinksale-pass "some_password" --dry-run
 
 DEVELOPMENT
 -----------
