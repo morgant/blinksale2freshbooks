@@ -1,7 +1,7 @@
 module Blinksale2FreshBooks
 
   class Configuration
-    attr_accessor :blinksale_id, :blinksale_username, :blinksale_password;
+    attr_accessor :blinksale_id, :blinksale_username, :blinksale_password
 
     def initialize
       @blinksale_id = nil

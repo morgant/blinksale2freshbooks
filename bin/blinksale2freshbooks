@@ -1,5 +1,40 @@
 #!/usr/bin/env ruby
 
+require 'bundler/setup'
+require 'optparse'
 require 'blinksale2freshbooks'
 
+options = {:dry_run => false}
+OptionParser.new do |opts|
+  opts.banner = "Usage: blinksale2freshbooks [options]"
+  
+  opts.on_tail("-h", "--dry-run", "Show this message") do
+    puts opts
+    exit
+  end
 
+  opts.on_tail("-n", "--dry-run", "Dry run") do
+    options[:dry_run] = true
+  end
+  
+  opts.on("--blinksale-id ID", "Blinksale account ID") do |id|
+    options[:blinksale_id] = id
+  end
+  
+  opts.on("--blinksale-user USER", "Blinksale username") do |user|
+    options[:blinksale_user] = user
+  end
+  
+  opts.on("--blinksale-pass PASS", "Blinksale password") do |pass|
+    options[:blinksale_pass] = pass
+  end
+end.parse!
+
+if options.has_key?(:blinksale_id) && options.has_key?(:blinksale_user) && options.has_key?(:blinksale_pass)
+  Blinksale2FreshBooks.configure do |config|
+    config.blinksale_id = options[:blinksale_id]
+    config.blinksale_username = options[:blinksale_user]
+    config.blinksale_password = options[:blinksale_pass]
+  end
+  Blinksale2FreshBooks.connect
+end
