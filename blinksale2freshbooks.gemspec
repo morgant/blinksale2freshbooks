@@ -9,8 +9,8 @@ Gem::Specification.new do |spec|
   spec.authors       = ["Morgan Aldridge"]
   spec.email         = ["morgant@makkintosshu.com"]
 
-  spec.summary       = "Migrate Blinksale data t FreshBooks"
-  spec.description   = "Migrate Blinksale Clients & Invoices to new FreshBooks cloud (not FreshBooks Classic)"
+  spec.summary       = "Migrate Blinksale data to FreshBooks"
+  spec.description   = "Migrate Blinksale Clients & Invoices to the new FreshBooks (not FreshBooks Classic)"
   spec.homepage      = "http://github.com/morgant/blinksale2freshbooks"
   spec.license       = "MIT"
 
