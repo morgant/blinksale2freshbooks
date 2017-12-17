@@ -1,6 +1,9 @@
+require "net/http"
+require "json"
 require "blinksale2freshbooks/version"
 require "blinksale2freshbooks/config"
 require "blinksale/blinksale"
+require "freshbooks/freshbooks"
 
 module Blinksale2FreshBooks
   attr_accessor :blinksale, :freshbooks
@@ -8,6 +11,9 @@ module Blinksale2FreshBooks
   def self.connect
     puts "Connecting to Blinksale..."
     @blinksale = Blinksale.new(@configuration.blinksale_id, @configuration.blinksale_username, @configuration.blinksale_password)
+    
+    puts "Connecting to FreshBooks..."
+    @freshbooks = FreshBooks.new(@configuration.freshbooks_api_client_id, @configuration.freshbooks_api_secret, @configuration.freshbooks_api_redirect_uri, @configuration.freshbooks_api_auth_code)
   end
   
   def self.all_blinksale_clients

@@ -28,13 +28,33 @@ OptionParser.new do |opts|
   opts.on("--blinksale-pass PASS", "Blinksale password") do |pass|
     options[:blinksale_pass] = pass
   end
+  
+  opts.on("--freshbooks-client ID", "FreshBooks API Client ID") do |id|
+    options[:freshbooks_api_client_id] = id
+  end
+  
+  opts.on("--freshbooks-secret SECRET", "FreshBooks API Secret") do |secret|
+    options[:freshbooks_api_secret] = secret
+  end
+  
+  opts.on("--freshbooks-redirect-url URL", "FreshBooks API Redirect URL") do |url|
+    options[:freshbooks_api_redirect_uri] = url
+  end
+  
+  opts.on("--freshbooks-code CODE", "FreshBooks API Authorization Code") do |code|
+    options[:freshbooks_api_auth_code] = code
+  end
 end.parse!
 
-if options.has_key?(:blinksale_id) && options.has_key?(:blinksale_user) && options.has_key?(:blinksale_pass)
+if [:blinksale_id, :blinksale_user, :blinksale_pass, :freshbooks_api_client_id, :freshbooks_api_secret, :freshbooks_api_redirect_uri].all? {|k| options.key?(k)}
   Blinksale2FreshBooks.configure do |config|
     config.blinksale_id = options[:blinksale_id]
     config.blinksale_username = options[:blinksale_user]
     config.blinksale_password = options[:blinksale_pass]
+    config.freshbooks_api_client_id = options[:freshbooks_api_client_id]
+    config.freshbooks_api_secret = options[:freshbooks_api_secret]
+    config.freshbooks_api_redirect_uri = options[:freshbooks_api_redirect_uri]
+    config.freshbooks_api_auth_code = options[:freshbooks_api_auth_code]
   end
   Blinksale2FreshBooks.connect
   Blinksale2FreshBooks.migrate(options[:dry_run])
