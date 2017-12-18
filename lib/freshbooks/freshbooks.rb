@@ -4,7 +4,7 @@ require 'freshbooks/oauth2_rest_client'
 
 class FreshBooks < REST::OAuth2Client
 
-  def initialize(client_id, client_secret, redirect_uri, auth_code)
+  def initialize(client_id, client_secret, redirect_uri, auth_code, token = nil)
     @host             = "api.freshbooks.com"
     @oauth2_client_id = client_id
     @oauth2_secret    = client_secret
@@ -15,7 +15,14 @@ class FreshBooks < REST::OAuth2Client
     @media_type       = "application/json"
     @headers          = { 'Api-Version' => 'alpha' }
     
-    get_authorization_token("/auth/oauth/token")
+    if token.nil? && !auth_code.nil?
+      get_token("/auth/oauth/token")
+    elsif !token.nil?
+      @oauth2_token = token
+      if token.expired?
+        refresh_token
+      end
+    end
   end
 
 end

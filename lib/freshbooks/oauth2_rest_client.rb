@@ -21,26 +21,47 @@ module REST
         nil
       end
     end
+    
+    def expired?
+      (Time.now > Time.at(@created_at + @expires_in)) ? true : false
+    end
   end
 
   class OAuth2Client < REST::Client
 
     attr_accessor :oauth2_auth_uri, :oauth2_client_id, :oauth2_secret, :oauth2_redirect_uri, :oauth2_token, :oauth2_grant_type, :oauth2_auth_code
     
-    def get_authorization_token(path)
+    def get_token(path)
       response = post path, {
         'client_id' => @oauth2_client_id,
         'client_secret' => @oauth2_secret,
         'redirect_uri' => @oauth2_redirect_uri,
         'grant_type' => (@oauth2_grant_type || 'authorization_code'),
         'code' => @oauth2_auth_code
-      }.to_json#, {
-      #  :headers => {"Content-type" => "application/json"}
-      #}
+      }.to_json
+      #puts "response: #{response.body}"
+      json = JSON.parse(response.body, {symbolize_names: true}) unless response.nil?
+      if !json.nil? && [:access_token, :refresh_token, :token_type].all? {|k| json.key?(k)}
+        @oauth2_token = OAuth2Token.new
+        @oauth2_token.access_token = json[:access_token]
+        @oauth2_token.refresh_token = json[:refresh_token]
+        @oauth2_token.token_type = json[:token_type]
+        @oauth2_token.created_at = json[:created_at]
+        @oauth2_token.expires_in = json[:expires_in]
+      end
+    end
+    
+    def refresh_token
+      response = post path, {
+        'client_id' => @oauth2_client_id,
+        'client_secret' => @oauth2_secret,
+        'redirect_uri' => @oauth2_redirect_uri,
+        'grant_type' => 'refresh_token',
+        'refresh_token' => @oauth2_token.refresh_token
+      }.to_json
       puts "response: #{response.body}"
-      json = JSON.parse(response.body) unless response.nil?
-      unless json.nil? || ![:access_token, :refresh_token, :token_type].all? {|k| json.key? k}
-        @oauth2_token = REST::OAuth2Token.new
+      json = JSON.parse(response.body, {symbolize_names: true}) unless response.nil?
+      if !json.nil? && [:access_token, :refresh_token, :token_type].all? {|k| json.key?(k)}
         @oauth2_token.access_token = json[:access_token]
         @oauth2_token.refresh_token = json[:refresh_token]
         @oauth2_token.token_type = json[:token_type]

@@ -2,6 +2,7 @@
 
 require 'bundler/setup'
 require 'optparse'
+require 'yaml'
 require 'blinksale2freshbooks'
 
 options = {:dry_run => false}
@@ -47,6 +48,7 @@ OptionParser.new do |opts|
 end.parse!
 
 if [:blinksale_id, :blinksale_user, :blinksale_pass, :freshbooks_api_client_id, :freshbooks_api_secret, :freshbooks_api_redirect_uri].all? {|k| options.key?(k)}
+  freshbooks_token_path = "#{Dir.home}/.freshbooks_oauth2_token"
   Blinksale2FreshBooks.configure do |config|
     config.blinksale_id = options[:blinksale_id]
     config.blinksale_username = options[:blinksale_user]
@@ -55,7 +57,17 @@ if [:blinksale_id, :blinksale_user, :blinksale_pass, :freshbooks_api_client_id, 
     config.freshbooks_api_secret = options[:freshbooks_api_secret]
     config.freshbooks_api_redirect_uri = options[:freshbooks_api_redirect_uri]
     config.freshbooks_api_auth_code = options[:freshbooks_api_auth_code]
+    if File.file?(freshbooks_token_path)
+      puts "Loading FreshBooks API token from '#{freshbooks_token_path}'..."
+      config.freshbooks_api_token = YAML::load(File.read(freshbooks_token_path))
+    end
   end
+  
   Blinksale2FreshBooks.connect
+  unless Blinksale2FreshBooks.freshbooks.oauth2_token.nil?
+    puts "Saving FreshBooks API token to '#{freshbooks_token_path}'..."
+    File.open(freshbooks_token_path, "wb") { |f| f.write(YAML::dump(Blinksale2FreshBooks.freshbooks.oauth2_token)) }
+  end
+    
   Blinksale2FreshBooks.migrate(options[:dry_run])
 end
