@@ -68,6 +68,20 @@ if [:blinksale_id, :blinksale_user, :blinksale_pass, :freshbooks_api_client_id, 
     puts "Saving FreshBooks API token to '#{freshbooks_token_path}'..."
     File.open(freshbooks_token_path, "wb") { |f| f.write(YAML::dump(Blinksale2FreshBooks.freshbooks.oauth2_token)) }
   end
-    
+  
+  if Blinksale2FreshBooks.freshbooks.account_id.nil? || Blinksale2FreshBooks.freshbooks.business_id.nil?
+    puts "FreshBooks Businesses:"
+    Blinksale2FreshBooks.freshbooks.identity.business_memberships.each_with_index do |membership, index|
+      business = membership["business"]
+      puts "[#{index + 1}] #{business['name']} (id: #{business['id']}; account_id: #{business['account_id']})"
+    end
+    puts "Enter business to migrate Blinksale data to:"
+    selection = STDIN.gets.chomp.to_i - 1
+    if (selection >= 0) && (selection < Blinksale2FreshBooks.freshbooks.identity.business_memberships.length)
+      Blinksale2FreshBooks.freshbooks.account_id = Blinksale2FreshBooks.freshbooks.identity.business_memberships[selection]["business"]["account_id"]
+      Blinksale2FreshBooks.freshbooks.business_id = Blinksale2FreshBooks.freshbooks.identity.business_memberships[selection]["business"]["id"]
+    end
+  end
+  
   Blinksale2FreshBooks.migrate(options[:dry_run])
 end

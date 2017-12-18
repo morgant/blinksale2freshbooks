@@ -4,7 +4,7 @@ require 'freshbooks/oauth2_rest_client'
 
 class FreshBooks < REST::OAuth2Client
 
-  attr_accessor :account_id
+  attr_accessor :account_id, :business_id
 
   def initialize(client_id, client_secret, redirect_uri, auth_code, token = nil)
     @host             = "api.freshbooks.com"

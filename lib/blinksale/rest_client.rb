@@ -188,6 +188,7 @@ module REST
           @http = Net::HTTP.new @host, (@port || 443)
           @http.use_ssl = true
           @http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+          #@http.set_debug_output($stdout)
         end
         @http
       end
