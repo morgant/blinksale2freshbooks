@@ -14,9 +14,9 @@ module REST
   class OAuth2Token
     attr_accessor :access_token, :refresh_token, :token_type, :created_at, :expires_in
     
-    def authorization_header
+    def authorization_headers
       unless @token_type.nil? || @access_token.nil?
-        { :authorization => "#{@token_type} #{@access_token}" }
+        { 'Authorization' => "#{@token_type} #{@access_token}" }
       else
         nil
       end
@@ -74,9 +74,7 @@ module REST
 
     def request(verb, path, body = nil, options = {})
       unless @oauth2_token.nil?
-        options = {
-          :headers => @oauth2_token.authorization_headers
-        }.merge(options)
+        options.merge!({:headers => @oauth2_token.authorization_headers})
       end
       super verb, path, body, options
     end
