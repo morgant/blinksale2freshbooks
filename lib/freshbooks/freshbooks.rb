@@ -4,6 +4,8 @@ require 'freshbooks/oauth2_rest_client'
 
 class FreshBooks < REST::OAuth2Client
 
+  attr_accessor :account_id
+
   def initialize(client_id, client_secret, redirect_uri, auth_code, token = nil)
     @host             = "api.freshbooks.com"
     @oauth2_client_id = client_id
@@ -23,6 +25,13 @@ class FreshBooks < REST::OAuth2Client
         refresh_token
       end
     end
+    
+    #has_many :clients, path: "/accounting/account/#{@account_id}/users/clients"
   end
+  
+  # The root resource instance for the client
+  def root; resource :path => '/'; end
+
+  def identity; resource :path => "/auth/api/v1/users/me"; end
 
 end

@@ -11,6 +11,55 @@ require 'json'
 
 module REST
 
+  class Resource
+    # replace these REST::Resource methods so they support XML or JSON
+    def self.unserialize(data, media_type)
+      #puts "media_type: #{media_type}"
+      if media_type.downcase == "application/json"
+        json_data = JSON.parse data
+        if json_data.key?("response") && json_data["response"].key?("result")
+          #puts "data[response][result]: #{json_data['response']['result']}"
+          json_data = json_data["response"]["result"]
+        elsif json_data.key?("response")
+          #puts "data[response]: #{json_data['response']}"
+          json_data = json_data["response"]
+        end
+        json_data
+      else
+        XmlNode.from_xml data
+      end
+    end
+    
+    def get(name)
+      if @client.media_type.downcase == "application/json"
+        document[name]
+      else
+        document.send(name) ? document.send(name).node_value : document[name]
+      end
+    end
+    
+    def set(name, value)
+      if @client.media_type == "application/json"
+        document[name] = value
+      else
+        document.send(name).node_value = value
+      end
+    end
+    
+    def attribute?(name)
+      if @client.media_type.downcase == "application/json"
+        return true if document[name]
+      else
+        return true if document.send(name) or document[name]
+      end
+      (@data.nil? and refresh) ? attribute?(name) : false
+    end
+    
+    def document
+      @document ||= self.class.unserialize(data, @client.media_type)
+    end
+  end
+
   class OAuth2Token
     attr_accessor :access_token, :refresh_token, :token_type, :created_at, :expires_in
     
