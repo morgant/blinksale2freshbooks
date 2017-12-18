@@ -29,8 +29,27 @@ class FreshBooks < REST::OAuth2Client
     #has_many :clients, path: "/accounting/account/#{@account_id}/users/clients"
   end
   
-  # The root resource instance for the client
-  def root; resource :path => '/'; end
+  def businesses
+    businesses = []
+    unless identity.business_memberships.nil?
+      identity.business_memberships.each do |membership|
+        businesses << membership["business"]
+      end
+    end
+    businesses
+  end
+  
+  def use_business(business_id, account_id)
+    raise ArgumentError unless businesses.any? {|business| business["id"] == business_id && business["account_id"] == account_id}
+    
+    @business_id = business_id
+    @account_id = account_id
+    
+    # clear the resource cache (we don't want to accidentally return/modify data for the wrong account!)
+    @resources = nil
+    
+    has_many :clients, path: "/accounting/account/#{@account_id}/users/clients"
+  end
 
   def identity; resource :path => "/auth/api/v1/users/me"; end
 

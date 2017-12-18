@@ -71,15 +71,13 @@ if [:blinksale_id, :blinksale_user, :blinksale_pass, :freshbooks_api_client_id, 
   
   if Blinksale2FreshBooks.freshbooks.account_id.nil? || Blinksale2FreshBooks.freshbooks.business_id.nil?
     puts "FreshBooks Businesses:"
-    Blinksale2FreshBooks.freshbooks.identity.business_memberships.each_with_index do |membership, index|
-      business = membership["business"]
+    Blinksale2FreshBooks.freshbooks.businesses.each_with_index do |business, index|
       puts "[#{index + 1}] #{business['name']} (id: #{business['id']}; account_id: #{business['account_id']})"
     end
     puts "Enter business to migrate Blinksale data to:"
     selection = STDIN.gets.chomp.to_i - 1
     if (selection >= 0) && (selection < Blinksale2FreshBooks.freshbooks.identity.business_memberships.length)
-      Blinksale2FreshBooks.freshbooks.account_id = Blinksale2FreshBooks.freshbooks.identity.business_memberships[selection]["business"]["account_id"]
-      Blinksale2FreshBooks.freshbooks.business_id = Blinksale2FreshBooks.freshbooks.identity.business_memberships[selection]["business"]["id"]
+      Blinksale2FreshBooks.freshbooks.use_business(Blinksale2FreshBooks.freshbooks.business_id = Blinksale2FreshBooks.freshbooks.businesses[selection]["id"], Blinksale2FreshBooks.freshbooks.businesses[selection]["account_id"])
     end
   end
   
