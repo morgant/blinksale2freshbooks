@@ -22,7 +22,7 @@ class FreshBooks < REST::OAuth2Client
     elsif !token.nil?
       @oauth2_token = token
       if token.expired?
-        refresh_token
+        refresh_token("/auth/oauth/token")
       end
     end
     

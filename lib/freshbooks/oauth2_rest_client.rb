@@ -100,7 +100,7 @@ module REST
       end
     end
     
-    def refresh_token
+    def refresh_token(path)
       response = post path, {
         'client_id' => @oauth2_client_id,
         'client_secret' => @oauth2_secret,
