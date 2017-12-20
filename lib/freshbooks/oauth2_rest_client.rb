@@ -65,7 +65,7 @@ module REST
     
     def authorization_headers
       unless @token_type.nil? || @access_token.nil?
-        { 'Authorization' => "#{@token_type} #{@access_token}" }
+        { 'Authorization' => "#{@token_type.capitalize} #{@access_token}" }
       else
         nil
       end
