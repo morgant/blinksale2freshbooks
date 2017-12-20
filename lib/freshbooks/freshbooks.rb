@@ -59,7 +59,7 @@ class FreshBooks < REST::OAuth2Client
     # clear the resource cache (we don't want to accidentally return/modify data for the wrong account!)
     @resources = nil
     
-    has_many :clients, path: "accounting/account/#{@account_id}/users/clients/"
+    has_many :clients, path: "accounting/account/#{@account_id}/users/clients"
   end
 
   def identity; resource :path => "/auth/api/v1/users/me"; end

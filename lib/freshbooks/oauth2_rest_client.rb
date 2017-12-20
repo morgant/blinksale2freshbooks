@@ -19,7 +19,7 @@ module REST
         json_data = JSON.parse data
         if json_data.key?("response") && json_data["response"].key?("result")
           #puts "data[response][result]: #{json_data['response']['result']}"
-          json_data = json_data["response"]["result"]
+          json_data = json_data["response"]["result"].find {|k, v| v.is_a?(Array) || v.is_a?(Hash)}[1]
         elsif json_data.key?("response")
           #puts "data[response]: #{json_data['response']}"
           json_data = json_data["response"]
@@ -57,6 +57,31 @@ module REST
     
     def document
       @document ||= self.class.unserialize(data, @client.media_type)
+    end
+
+    private
+
+    # add these REST::Resource methods to ease the support of JSON in addition to XML
+  end
+
+  module CollectionMethods
+    private
+    
+    def paths
+      if @client.media_type.downcase == "application/json"
+        resource_name = @path.split('/').last
+        document.each { |e| path_from(e.id) if e.attribute?('id') }
+      else
+        document.node.root.elements.collect { |e| path_for e.attributes['uri'] }
+      end
+    end
+    
+    def element_for(id)
+      if @client.media_type.downcase == "application/json"
+        document.find { |e| e.attribute?("id") && e.id == id }
+      else
+        document.node.root.elements.detect{ |n| path_for(n.attributes['uri'])==path_from(id) }  
+      end
     end
   end
 
