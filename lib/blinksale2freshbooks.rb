@@ -29,7 +29,9 @@ module Blinksale2FreshBooks
   end
   
   def self.migrate(dry_run = true)
-    puts "Migrating from #{@blinksale.host}..."
+    raise ArgumentError if @freshbooks.using_business.nil?
+    
+    puts "Migrating from Blinksale (#{@blinksale.host}) to FreshBooks (#{@freshbooks.using_business['name']})..."
     
     clients = all_blinksale_clients
     puts "#{clients.count} clients..."
@@ -47,7 +49,6 @@ module Blinksale2FreshBooks
     invoices.each do |invoice|
       puts "\t#{invoice.number} (#{invoice.date}; #{invoice.status})..."
     end
-    
     
   end
 end

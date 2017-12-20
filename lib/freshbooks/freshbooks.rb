@@ -39,6 +39,10 @@ class FreshBooks < REST::OAuth2Client
     businesses
   end
   
+  def using_business
+    (@business_id.nil? || @account_id.nil?) ? nil : businesses.find {|business| business["id"] == @business_id && business["account_id"] == @account_id}
+  end
+  
   def use_business(business_id, account_id)
     raise ArgumentError unless businesses.any? {|business| business["id"] == business_id && business["account_id"] == account_id}
     
