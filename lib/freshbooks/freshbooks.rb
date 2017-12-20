@@ -25,8 +25,15 @@ class FreshBooks < REST::OAuth2Client
         refresh_token("/auth/oauth/token")
       end
     end
-    
-    #has_many :clients, path: "/accounting/account/#{@account_id}/users/clients"
+  end
+  
+  # The new FreshBooks API wants all search/filter query string parameters as "search[key]=value" instead of "key=value",
+  # so we rewrite those here before letting REST::Client take care of the rest
+  def resource(options = {})
+    if options.is_a?(Hash) && options.key?(:filter) && !options[:filter].empty?
+      options[:filter] = Hash[options[:filter].map {|k, v| [CGI::escape("search[#{k}]"), v] }]
+    end
+    super options
   end
   
   def businesses
@@ -52,7 +59,7 @@ class FreshBooks < REST::OAuth2Client
     # clear the resource cache (we don't want to accidentally return/modify data for the wrong account!)
     @resources = nil
     
-    has_many :clients, path: "/accounting/account/#{@account_id}/users/clients"
+    has_many :clients, path: "accounting/account/#{@account_id}/users/clients/"
   end
 
   def identity; resource :path => "/auth/api/v1/users/me"; end
