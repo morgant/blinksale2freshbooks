@@ -16,7 +16,7 @@ module REST
     def self.unserialize(data, media_type)
       #puts "media_type: #{media_type}"
       if media_type.downcase == "application/json"
-        json_data = JSON.parse data
+        json_data = JSON.parse(data)
         if json_data.key?("response") && json_data["response"].key?("result")
           #puts "data[response][result]: #{json_data['response']['result']}"
           json_data = json_data["response"]["result"].find {|k, v| v.is_a?(Array) || v.is_a?(Hash)}[1]
@@ -26,8 +26,12 @@ module REST
         end
         json_data
       else
-        XmlNode.from_xml data
+        XmlNode.from_xml(data)
       end
+    end
+
+    def self.serialize(document)
+      document.is_a?(XmlNode) ? document.to_s : document.to_json
     end
     
     def get(name)
@@ -58,6 +62,17 @@ module REST
     def document
       @document ||= self.class.unserialize(data, @client.media_type)
     end
+    
+    def create
+      response = @client.post @parent.path, serialized, :expected_response => 200
+      if @client.media_type.downcase == "application/json"
+        @data, @document, @path = response.body, nil, @parent.send(:path_from, JSON.parse(response.body)["response"]["result"]["client"]["id"])
+      else
+        @data, @document, @path = response.body, nil, @parent.send(:path_for, response['Location'])
+      end
+      @parent.refresh
+      true
+    end
 
     private
 
@@ -70,7 +85,7 @@ module REST
     def paths
       if @client.media_type.downcase == "application/json"
         resource_name = @path.split('/').last
-        document.each { |e| path_from(e.id) if e.attribute?('id') }
+        document.collect { |e| path_from(e["id"]) if e.key?("id") }
       else
         document.node.root.elements.collect { |e| path_for e.attributes['uri'] }
       end
@@ -78,7 +93,7 @@ module REST
     
     def element_for(id)
       if @client.media_type.downcase == "application/json"
-        document.find { |e| e.attribute?("id") && e.id == id }
+        document.find { |e| e.key?("id") && e["id"] == id }
       else
         document.node.root.elements.detect{ |n| path_for(n.attributes['uri'])==path_from(id) }  
       end

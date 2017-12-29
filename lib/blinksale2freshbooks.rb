@@ -36,12 +36,7 @@ module Blinksale2FreshBooks
     clients = all_blinksale_clients
     puts "#{clients.count} clients..."
     clients.each do |client|
-      puts "\t'#{client.name}'..."
-      if client.people.length > 0
-        client.people.each do |person|
-          puts "\t\t'#{person.first_name} #{person.last_name}'..."
-        end
-      end
+      migrate_blinksale_client(client, dry_run)
     end
     
     invoices = all_blinksale_invoices
@@ -49,6 +44,47 @@ module Blinksale2FreshBooks
     invoices.each do |invoice|
       puts "\t#{invoice.number} (#{invoice.date}; #{invoice.status})..."
     end
+  end
+  
+  private
+  
+  def self.migrate_blinksale_client(client, dry_run = true)
+    raise ArgumentError if client.nil?
     
+    puts "\t#{client.name}..."
+    if client.people.length > 0
+      puts "\t\tPeople:"
+      client.people.each do |person|
+        puts "\t\t#{person.first_name} #{person.last_name}..."
+        fb_clients = @freshbooks.clients(email: person.email)
+        if !fb_clients.nil? && fb_clients.length > 0
+          puts "\t\t\tAlready exists."
+        else
+          puts "\t\t\tCreating #{dry_run ? "(not really)" : ""}..."
+          new_client = @freshbooks.clients.new({
+            client: {
+              # equivalent to BlinkSale "person" data:
+              fname: person.first_name,
+              lname: person.last_name,
+              email: person.email,
+              bus_phone: person.phone_office,  # note: may need to better handle whether to use person.phone_office or client.phone
+              mob_phone: person.phone_mobile,
+              # equivalent to BlinkSale "client" data:
+              organization: client.name,
+              p_street: client.address1,
+              p_street2: client.address2,
+              p_city: client.city,
+              p_province: client.state,
+              p_code: client.zip,
+              p_country: client.country,
+              fax: client.fax
+            }
+          }.to_json)
+          unless dry_run || new_client.nil?
+            new_client.save
+          end
+        end
+      end
+    end
   end
 end
