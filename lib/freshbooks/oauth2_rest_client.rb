@@ -73,6 +73,10 @@ module REST
       @parent.refresh
       true
     end
+    
+    def parent
+      @parent
+    end
 
     private
 
@@ -93,9 +97,10 @@ module REST
     
     def element_for(id)
       if @client.media_type.downcase == "application/json"
-        document.find { |e| e.key?("id") && e["id"] == id }
+        resource = document.detect { |e| e.key?("id") && e["id"] == id }
+        JSON.generate(resource)
       else
-        document.node.root.elements.detect{ |n| path_for(n.attributes['uri'])==path_from(id) }  
+        document.node.root.elements.detect{ |n| path_for(n.attributes['uri']) == path_from(id) }  
       end
     end
   end
