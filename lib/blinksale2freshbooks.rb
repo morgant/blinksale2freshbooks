@@ -1,5 +1,6 @@
 require "net/http"
 require "json"
+require "active_support/core_ext/object/blank"
 require "blinksale2freshbooks/version"
 require "blinksale2freshbooks/config"
 require "blinksale/blinksale"
@@ -48,6 +49,72 @@ module Blinksale2FreshBooks
   
   private
   
+  def self.values_match?(val1, val2)
+    if !(val1.blank? && val2.blank?) && (val1 != val2)
+      false
+    else
+      true
+    end
+  end
+  
+  def self.compare_blinksale_person_to_freshbooks_client(bs_person, fb_client)
+    match = true
+    bs_client = bs_person.parent.parent
+    if !values_match?(bs_person.first_name, fb_client.fname)
+      puts "\t\t\t\tFirst Name differs ('#{bs_person.first_name}' vs '#{fb_client.fname}')"
+      match = false
+    end
+    if !values_match?(bs_person.last_name, fb_client.lname)
+      puts "\t\t\t\tLast Name differs ('#{bs_person.last_name}' vs '#{fb_client.lname}')"
+      match = false
+    end
+    if !values_match?(bs_person.email, fb_client.email)
+      puts "\t\t\t\tEmail differs ('#{bs_person.email}' vs '#{fb_client.email}')"
+      match = false
+    end
+    if !values_match?(bs_person.phone_office, fb_client.bus_phone)
+      puts "\t\t\t\tOffice Phone differs ('#{bs_person.phone_office}' vs '#{fb_client.bus_phone}')"
+      match = false
+    end
+    if !values_match?(bs_person.phone_mobile, fb_client.mob_phone)
+      puts "\t\t\t\tMobile Phone differs ('#{bs_person.phone_mobile}' vs '#{fb_client.mob_phone}')"
+      match = false
+    end
+    if !values_match?(bs_client.name, fb_client.organization)
+      puts "\t\t\t\tCompany/Organization differs ('#{bs_client.name}' vs '#{fb_client.organization}')"
+      match = false
+    end
+    if !values_match?(bs_client.address1, fb_client.p_street)
+      puts "\t\t\t\tAddress (Line 1) differs ('#{bs_client.address1}' vs '#{fb_client.p_street}')"
+      match = false
+    end
+    if !values_match?(bs_client.address2, fb_client.p_street2)
+      puts "\t\t\t\tAddress (Line 2) differs ('#{bs_client.address2}' vs '#{fb_client.p_street2}')"
+      match = false
+    end
+    if !values_match?(bs_client.city, fb_client.p_city)
+      puts "\t\t\t\tCity differs ('#{bs_client.city}' vs '#{fb_client.p_city}')"
+      match = false
+    end
+    if !values_match?(bs_client.state, fb_client.p_province)
+      puts "\t\t\t\tState differs ('#{bs_client.state}' vs '#{fb_client.p_province}')"
+      match = false
+    end
+    if !values_match?(bs_client.zip, fb_client.p_code)
+      puts "\t\t\t\tZip differs ('#{bs_client.zip}' vs '#{fb_client.p_code}')"
+      match = false
+    end
+    if !values_match?(bs_client.country, fb_client.p_country)
+      puts "\t\t\t\tCountry differs ('#{bs_client.country}' vs '#{fb_client.p_country}')"
+      match = false
+    end
+    if !values_match?(bs_client.fax, fb_client.fax)
+      puts "\t\t\t\tFax differs ('#{bs_client.fax}' vs '#{fb_client.fax}')"
+      match = false
+    end
+    match
+  end
+  
   def self.migrate_blinksale_client(client, dry_run = true)
     raise ArgumentError if client.nil?
     
@@ -59,6 +126,13 @@ module Blinksale2FreshBooks
         fb_clients = @freshbooks.clients(email: person.email)
         if !fb_clients.nil? && fb_clients.length > 0
           puts "\t\t\tAlready exists."
+          fb_clients.each do |fb_client|
+            if compare_blinksale_person_to_freshbooks_client(person, fb_client)
+              puts "\t\t\tMatches."
+            else
+              puts "\t\t\tDiffers."
+            end
+          end
         else
           puts "\t\t\tCreating #{dry_run ? "(not really)" : ""}..."
           new_client = @freshbooks.clients.new({
