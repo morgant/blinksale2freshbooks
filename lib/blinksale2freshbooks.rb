@@ -114,6 +114,49 @@ module Blinksale2FreshBooks
     end
     match
   end
+
+  def self.create_freshbooks_client_from_blinksale_person(bs_person)
+    bs_client = bs_person.parent.parent
+    @freshbooks.clients.new({
+      client: {
+        # equivalent to BlinkSale "person" data:
+        fname: bs_person.first_name,
+        lname: bs_person.last_name,
+        email: bs_person.email,
+        bus_phone: bs_person.phone_office,  # note: may need to better handle whether to use person.phone_office or client.phone
+        mob_phone: bs_person.phone_mobile,
+        # equivalent to BlinkSale "client" data:
+        organization: bs_client.name,
+        p_street: bs_client.address1,
+        p_street2: bs_client.address2,
+        p_city: bs_client.city,
+        p_province: bs_client.state,
+        p_code: bs_client.zip,
+        p_country: bs_client.country,
+        fax: bs_client.fax
+      }
+    }.to_json)
+  end
+  
+  def self.update_freshbooks_client_with_blinksale_person(fb_client, bs_person)
+    bs_client = bs_person.parent.parent
+    # equivalent to BlinkSale "person" data:
+    fb_client.fname = bs_person.first_name
+    fb_client.lname = bs_person.last_name
+    fb_client.email = bs_person.email
+    fb_client.bus_phone = bs_person.phone_office  # note: may need to better handle whether to use person.phone_office or client.phone
+    fb_client.mob_phone = bs_person.phone_mobile
+    # equivalent to BlinkSale "client" data:
+    fb_client.organization = bs_client.name
+    fb_client.p_street = bs_client.address1
+    fb_client.p_street2 = bs_client.address2
+    fb_client.p_city = bs_client.city
+    fb_client.p_province = bs_client.state
+    fb_client.p_code = bs_client.zip
+    fb_client.p_country = bs_client.country
+    fb_client.fax = bs_client.fax
+    fb_client
+  end
   
   def self.migrate_blinksale_client(client, dry_run = true)
     raise ArgumentError if client.nil?
@@ -130,30 +173,16 @@ module Blinksale2FreshBooks
             if compare_blinksale_person_to_freshbooks_client(person, fb_client)
               puts "\t\t\tMatches."
             else
-              puts "\t\t\tDiffers."
+              puts "\t\t\tDiffers. Updating..."
+              fb_client = update_freshbooks_client_with_blinksale_person(fb_client, person)
+              unless dry_run
+                fb_client.save
+              end
             end
           end
         else
           puts "\t\t\tCreating #{dry_run ? "(not really)" : ""}..."
-          new_client = @freshbooks.clients.new({
-            client: {
-              # equivalent to BlinkSale "person" data:
-              fname: person.first_name,
-              lname: person.last_name,
-              email: person.email,
-              bus_phone: person.phone_office,  # note: may need to better handle whether to use person.phone_office or client.phone
-              mob_phone: person.phone_mobile,
-              # equivalent to BlinkSale "client" data:
-              organization: client.name,
-              p_street: client.address1,
-              p_street2: client.address2,
-              p_city: client.city,
-              p_province: client.state,
-              p_code: client.zip,
-              p_country: client.country,
-              fax: client.fax
-            }
-          }.to_json)
+          new_client = create_freshbooks_client_from_blinksale_person(person)
           unless dry_run || new_client.nil?
             new_client.save
           end
