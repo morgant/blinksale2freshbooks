@@ -42,21 +42,23 @@ module Blinksale2FreshBooks
     
     invoices = all_blinksale_invoices
     puts "#{invoices.count} invoices..."
-    invoices.each do |invoice|
-      puts "\t#{invoice.number} (#{invoice.date}; #{invoice.status})..."
-    end
-  end
-  
-  private
-  
-  def self.values_match?(val1, val2)
-    if !(val1.blank? && val2.blank?) && (val1 != val2)
-      false
+    invoices.each do Date,Start,Stop,Client,Project,Task,Notes
+    #when "open"
     else
-      true
+      (v3) ? "sent" : 2
+    #when "pastdue"
+    #  (v3) ? "overdue" : 2
+    #when "closed"
+    #  if bs_invoice.total.to_i > 0 && bs_invoice.total_due.to_i > 0 && bs_invoice.paid.to_i > 0
+    #    (v3) ? "partial" : 8
+    #  else
+    #    (v3) ? "paid" : 4
+    #  end
+    #else
+    #  raise ArgumentError
     end
   end
-  
+
   def self.compare_blinksale_person_to_freshbooks_client(bs_person, fb_client)
     match = true
     bs_client = bs_person.parent.parent
@@ -119,13 +121,13 @@ module Blinksale2FreshBooks
     bs_client = bs_person.parent.parent
     @freshbooks.clients.new({
       client: {
-        # equivalent to BlinkSale "person" data:
+        # equivalent to Blinksale "person" data:
         fname: bs_person.first_name,
         lname: bs_person.last_name,
         email: bs_person.email,
         bus_phone: bs_person.phone_office,  # note: may need to better handle whether to use person.phone_office or client.phone
         mob_phone: bs_person.phone_mobile,
-        # equivalent to BlinkSale "client" data:
+        # equivalent to Blinksale "client" data:
         organization: bs_client.name,
         p_street: bs_client.address1,
         p_street2: bs_client.address2,
@@ -137,7 +139,34 @@ module Blinksale2FreshBooks
       }
     }.to_json)
   end
-  
+
+  def self.create_freshbooks_invoice_from_blinksale_invoice(bs_invoice)
+    bs_client = @blinksale.clients.detect {|client| client.url == bs_invoice.client}
+    fb_client = find_freshbooks_clients_by_blinksale_client(bs_client).first
+
+    @freshbooks.invoices.new({
+      invoice: {
+        # FreshBooks specific:
+        ownerid: 1, # invoice creator (1: business admin)
+        #estimateid: 0, # associated estimate
+        #basecampid: 0, # connected BaseCamp account
+        #sentid: 1, # user who sent invoice (1: business admin)
+        # equivalent to Blinksale "invoice" data
+        #created_at: bs_invoice.created_at, # read-only field in FreshBooks
+        #updated: bs_invoice.updated_at,    # read-only field in FreshBooks
+        create_date: bs_invoice.date,
+        invoice_number: bs_invoice.number,
+        customerid: fb_client.id,
+        po_number: bs_invoice.po_number,
+        status: blinksale_invoice_status_to_freshbooks(bs_invoice, false),
+        terms: bs_invoice.terms,
+        due_offset_days: bs_invoice.terms,
+        currency_code: bs_invoice.currency,
+        notes: bs_invoice.notes
+      }
+    }.to_json)
+  end
+
   def self.update_freshbooks_client_with_blinksale_person(fb_client, bs_person)
     bs_client = bs_person.parent.parent
     # equivalent to BlinkSale "person" data:
@@ -157,10 +186,22 @@ module Blinksale2FreshBooks
     fb_client.fax = bs_client.fax
     fb_client
   end
-  
+
+  def self.find_freshbooks_clients_by_blinksale_client(bs_client)
+    raise ArgumentError if bs_client.nil?
+
+    fb_clients = []
+    bs_client.people.each do |person|
+      @freshbooks.clients(email: person.email).each do |fb_client|
+        fb_clients << fb_client
+      end
+    end
+    fb_clients
+  end
+
   def self.migrate_blinksale_client(client, dry_run = true)
     raise ArgumentError if client.nil?
-    
+
     puts "\t#{client.name}..."
     if client.people.length > 0
       puts "\t\tPeople:"
@@ -190,4 +231,21 @@ module Blinksale2FreshBooks
       end
     end
   end
+
+  def self.migrate_blinksale_invoice(invoice, dry_run = true)
+    raise ArgumentError if invoice.nil?
+
+    puts "\t#{invoice.number} (#{invoice.date}; #{invoice.status})..."
+    fb_invoices = @freshbooks.invoices(invoice_number: invoice.number)
+    if !fb_invoices.nil? && fb_invoices.length > 0
+      puts "\t\tAlready exists."
+    else
+      puts "\t\tCreating #{dry_run ? "(not really)" : ""}..."
+      new_invoice = create_freshbooks_invoice_from_blinksale_invoice(invoice)
+      unless dry_run || new_invoice.nil?
+        new_invoice.save
+      end
+    end
+  end
+
 end
