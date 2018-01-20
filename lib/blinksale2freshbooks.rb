@@ -3,6 +3,7 @@ require "json"
 require "active_support/core_ext/object/blank"
 require "blinksale2freshbooks/version"
 require "blinksale2freshbooks/config"
+require "blinksale2freshbooks/migration"
 require "blinksale/blinksale"
 require "freshbooks/freshbooks"
 
@@ -135,6 +136,38 @@ module Blinksale2FreshBooks
     match
   end
 
+  def self.compare_blinksale_invoice_to_freshbooks_invoice(bs_invoice, fb_invoice)
+    match = true
+
+    # compare invoice attrs between Blinksale & FreshBooks invoice objects
+    invoice = Blinksale2FreshBooks::Migration.new(bs_invoice, fb_invoice)
+    invoice.add_attr_association("Creation Date", "date", "create_date")
+    invoice.add_attr_association("Invoice Number", "number", "invoice_number")
+    invoice.add_attr_association("PO Number", "po_number")
+    invoice.add_attr_association("Terms", "terms")
+    invoice.add_attr_association("Days Due", "terms", "due_offset_days")
+    invoice.add_attr_association("Currency Code", "currency", "currency_code")
+    invoice.add_attr_association("Notes", "notes")
+    match = false if invoice.same?
+
+    # compare the invoice statuses
+    bs_invoice_status = blinksale_invoice_status_to_freshbooks(bs_invoice, false)
+    if (fb_invoice.status != bs_invoice_status)
+      puts "\t\t\t\tStatus differs ('#{fb_invoice.status}' vs '#{bs_invoice_status}')"
+      match = false
+    end
+
+    # confirm the billing client is the same
+    bs_client = @blinksale.clients.detect {|client| client.url == bs_invoice.client}
+    fb_client = @freshbooks.clients(userid: fb_invoice.customerid)
+    if (fb_client.first.userid != find_freshbooks_clients_by_blinksale_client(bs_client).first.userid)
+      puts "\t\t\t\tClient differs ('#{fb_client.first.organization}' vs '#{bs_client.name}')"
+      match = false
+    end
+
+    match
+  end
+
   def self.create_freshbooks_client_from_blinksale_person(bs_person)
     bs_client = bs_person.parent.parent
     @freshbooks.clients.new({
@@ -257,6 +290,17 @@ module Blinksale2FreshBooks
     fb_invoices = @freshbooks.invoices(invoice_number: invoice.number)
     if !fb_invoices.nil? && fb_invoices.length > 0
       puts "\t\tAlready exists."
+      fb_invoices.each do |fb_invoice|
+        if compare_blinksale_invoice_to_freshbooks_invoice(invoice, fb_invoice)
+          puts "\t\t\tMatches."
+        else
+          puts "\t\t\tDiffers. Updating..."
+          #fb_invoice = update_freshbooks_invoice_with_blinksale_invoice(fb_invoice, bs_invoice)
+          #unless dry_run
+          #  fb_invoice.save
+          #end
+        end
+      end
     else
       puts "\t\tCreating #{dry_run ? "(not really)" : ""}..."
       new_invoice = create_freshbooks_invoice_from_blinksale_invoice(invoice)
