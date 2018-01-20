@@ -31,18 +31,36 @@ module Blinksale2FreshBooks
   
   def self.migrate(dry_run = true)
     raise ArgumentError if @freshbooks.using_business.nil?
-    
+
     puts "Migrating from Blinksale (#{@blinksale.host}) to FreshBooks (#{@freshbooks.using_business['name']})..."
-    
+
     clients = all_blinksale_clients
     puts "#{clients.count} clients..."
     clients.each do |client|
       migrate_blinksale_client(client, dry_run)
     end
-    
+
     invoices = all_blinksale_invoices
     puts "#{invoices.count} invoices..."
-    invoices.each do Date,Start,Stop,Client,Project,Task,Notes
+    invoices.each do |invoice|
+      migrate_blinksale_invoice(invoice, dry_run)
+    end
+  end
+
+  private
+  
+  def self.values_match?(val1, val2)
+    if !(val1.blank? && val2.blank?) && (val1 != val2)
+      false
+    else
+      true
+    end
+  end
+
+  def self.blinksale_invoice_status_to_freshbooks(bs_invoice, v3 = true)
+    case bs_invoice.status.downcase
+    when "draft"
+      (v3) ? "draft" : 1
     #when "open"
     else
       (v3) ? "sent" : 2
