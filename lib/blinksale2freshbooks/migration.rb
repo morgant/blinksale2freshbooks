@@ -25,7 +25,7 @@ module Blinksale2FreshBooks
 
     def same?
       no_match = @attrs.detect {|f| !attrs_match?(f[:src], f[:dst], f[:desc])}
-      (no_match.length > 0) ? true : false
+      no_match.nil?
     end
 
     private
