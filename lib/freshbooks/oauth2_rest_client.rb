@@ -66,7 +66,13 @@ module REST
     def create
       response = @client.post @parent.path, serialized, :expected_response => 200
       if @client.media_type.downcase == "application/json"
-        @data, @document, @path = response.body, nil, @parent.send(:path_from, JSON.parse(response.body)["response"]["result"]["client"]["id"])
+        json_data = JSON.parse(response.body)
+        if json_data.key?("response") && json_data["response"].key?("result")
+          json_data = json_data["response"]["result"].find {|k, v| v.is_a?(Array) || v.is_a?(Hash)}[1]
+        elsif json_data.key?("response")
+          json_data = json_data["response"]
+        end
+        @data, @document, @path = response.body, nil, @parent.send(:path_from, json_data["id"])
       else
         @data, @document, @path = response.body, nil, @parent.send(:path_for, response['Location'])
       end

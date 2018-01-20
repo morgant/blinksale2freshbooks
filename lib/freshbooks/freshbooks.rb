@@ -60,8 +60,23 @@ class FreshBooks < REST::OAuth2Client
     @resources = nil
     
     has_many :clients, path: "accounting/account/#{@account_id}/users/clients"
+    has_many :invoices, path: "accounting/account/#{@account_id}/invoices/invoices",:extend => Invoice do |invoice|
+      invoice.has_many :lines
+      #invoice.has_many :comments
+    end
+    has_many :payments
   end
 
   def identity; resource :path => "/auth/api/v1/users/me"; end
+
+  module Invoice
+    module ResourceMethods
+
+    end
+    module CollectionMethods
+      def total; self.inject(0){ |sum, i| sum + i.total.to_f }; end
+      def max_number; self.collect{ |i| i.number }.max; end
+    end
+  end
 
 end
