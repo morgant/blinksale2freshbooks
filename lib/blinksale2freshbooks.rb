@@ -217,6 +217,29 @@ module Blinksale2FreshBooks
     fb_client
   end
 
+  def self.update_freshbooks_invoice_with_blinksale_invoice(fb_invoice, bs_invoice)
+    bs_client = @blinksale.clients.detect {|client| client.url == bs_invoice.client}
+    fb_client = find_freshbooks_clients_by_blinksale_client(bs_client).first
+
+    # FreshBooks specific:
+    #estimateid: 0, # associated estimate
+    #basecampid: 0, # connected BaseCamp account
+    #sentid: 1, # user who sent invoice (1: business admin)
+    # equivalent to Blinksale "invoice" data
+    #created_at: bs_invoice.created_at, # read-only field in FreshBooks
+    #updated: bs_invoice.updated_at,    # read-only field in FreshBooks
+    fb_invoice.create_date = bs_invoice.date
+    fb_invoice.invoice_number = bs_invoice.number
+    fb_invoice.customerid = fb_client.id
+    #fb_invoice.po_number = bs_invoice.po_number # getting method_missing failures for this even though it should work
+    fb_invoice.status = blinksale_invoice_status_to_freshbooks(bs_invoice, false)
+    fb_invoice.terms = bs_invoice.terms
+    fb_invoice.due_offset_days = bs_invoice.terms
+    fb_invoice.currency_code = bs_invoice.currency
+    fb_invoice.notes = bs_invoice.notes
+    fb_invoice
+  end
+
   def self.find_freshbooks_clients_by_blinksale_client(bs_client)
     raise ArgumentError if bs_client.nil?
 
@@ -274,10 +297,10 @@ module Blinksale2FreshBooks
           puts "\t\t\tMatches."
         else
           puts "\t\t\tDiffers. Updating..."
-          #fb_invoice = update_freshbooks_invoice_with_blinksale_invoice(fb_invoice, bs_invoice)
-          #unless dry_run
-          #  fb_invoice.save
-          #end
+          fb_invoice = update_freshbooks_invoice_with_blinksale_invoice(fb_invoice, invoice)
+          unless dry_run
+            fb_invoice.save
+          end
         end
       end
     else
