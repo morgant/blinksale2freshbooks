@@ -80,59 +80,35 @@ module Blinksale2FreshBooks
 
   def self.compare_blinksale_person_to_freshbooks_client(bs_person, fb_client)
     match = true
+
+    # compare attrs between Blinksale Person & FreshBooks Client objects
+    person = Blinksale2FreshBooks::Migration.new(bs_person, fb_client)
+    person.add_attr_association("First Name", "first_name", "fname")
+    person.add_attr_association("Last Name", "last_name", "lname")
+    person.add_attr_association("Email", "email")
+    person.add_attr_association("Business Phone", "phone_office", "bus_phone")
+    person.add_attr_association("Mobile Phone", "phone_mobile", "mob_phone")
+    if !person.same?
+      puts "\t\t\t\tPerson attributes differ!"
+      match = false
+    end
+    
+    # compare attrs between  Blinksale Client & FreshBooks Client objects
     bs_client = bs_person.parent.parent
-    if !values_match?(bs_person.first_name, fb_client.fname)
-      puts "\t\t\t\tFirst Name differs ('#{bs_person.first_name}' vs '#{fb_client.fname}')"
+    company = Blinksale2FreshBooks::Migration.new(bs_client, fb_client)
+    company.add_attr_association("Organization Name", "name", "organization")
+    company.add_attr_association("Street Address (Line 1)", "address1", "p_street")
+    company.add_attr_association("Street Address (Line 2)", "address2", "p_street2")
+    company.add_attr_association("City", "city", "p_city")
+    company.add_attr_association("State", "state", "p_province")
+    company.add_attr_association("Postal Code", "zip", "p_code")
+    company.add_attr_association("Country", "country", "p_country")
+    company.add_attr_association("Fax", "fax")
+    if !company.same?
+      puts "\t\t\t\tCompany/Organization attributes differ!"
       match = false
     end
-    if !values_match?(bs_person.last_name, fb_client.lname)
-      puts "\t\t\t\tLast Name differs ('#{bs_person.last_name}' vs '#{fb_client.lname}')"
-      match = false
-    end
-    if !values_match?(bs_person.email, fb_client.email)
-      puts "\t\t\t\tEmail differs ('#{bs_person.email}' vs '#{fb_client.email}')"
-      match = false
-    end
-    if !values_match?(bs_person.phone_office, fb_client.bus_phone)
-      puts "\t\t\t\tOffice Phone differs ('#{bs_person.phone_office}' vs '#{fb_client.bus_phone}')"
-      match = false
-    end
-    if !values_match?(bs_person.phone_mobile, fb_client.mob_phone)
-      puts "\t\t\t\tMobile Phone differs ('#{bs_person.phone_mobile}' vs '#{fb_client.mob_phone}')"
-      match = false
-    end
-    if !values_match?(bs_client.name, fb_client.organization)
-      puts "\t\t\t\tCompany/Organization differs ('#{bs_client.name}' vs '#{fb_client.organization}')"
-      match = false
-    end
-    if !values_match?(bs_client.address1, fb_client.p_street)
-      puts "\t\t\t\tAddress (Line 1) differs ('#{bs_client.address1}' vs '#{fb_client.p_street}')"
-      match = false
-    end
-    if !values_match?(bs_client.address2, fb_client.p_street2)
-      puts "\t\t\t\tAddress (Line 2) differs ('#{bs_client.address2}' vs '#{fb_client.p_street2}')"
-      match = false
-    end
-    if !values_match?(bs_client.city, fb_client.p_city)
-      puts "\t\t\t\tCity differs ('#{bs_client.city}' vs '#{fb_client.p_city}')"
-      match = false
-    end
-    if !values_match?(bs_client.state, fb_client.p_province)
-      puts "\t\t\t\tState differs ('#{bs_client.state}' vs '#{fb_client.p_province}')"
-      match = false
-    end
-    if !values_match?(bs_client.zip, fb_client.p_code)
-      puts "\t\t\t\tZip differs ('#{bs_client.zip}' vs '#{fb_client.p_code}')"
-      match = false
-    end
-    if !values_match?(bs_client.country, fb_client.p_country)
-      puts "\t\t\t\tCountry differs ('#{bs_client.country}' vs '#{fb_client.p_country}')"
-      match = false
-    end
-    if !values_match?(bs_client.fax, fb_client.fax)
-      puts "\t\t\t\tFax differs ('#{bs_client.fax}' vs '#{fb_client.fax}')"
-      match = false
-    end
+    
     match
   end
 
@@ -143,12 +119,15 @@ module Blinksale2FreshBooks
     invoice = Blinksale2FreshBooks::Migration.new(bs_invoice, fb_invoice)
     invoice.add_attr_association("Creation Date", "date", "create_date")
     invoice.add_attr_association("Invoice Number", "number", "invoice_number")
-    invoice.add_attr_association("PO Number", "po_number")
+    #invoice.add_attr_association("PO Number", "po_number") # getting method_missing failures for this even though it should work
     invoice.add_attr_association("Terms", "terms")
     invoice.add_attr_association("Days Due", "terms", "due_offset_days")
     invoice.add_attr_association("Currency Code", "currency", "currency_code")
     invoice.add_attr_association("Notes", "notes")
-    match = false if invoice.same?
+    if !invoice.same?
+      puts "\t\t\t\tInvoice attributes differ!"
+      match = false
+    end
 
     # compare the invoice statuses
     bs_invoice_status = blinksale_invoice_status_to_freshbooks(bs_invoice, false)
