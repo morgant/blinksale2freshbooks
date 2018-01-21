@@ -34,7 +34,7 @@ module Blinksale2FreshBooks
       raise ArgumentError if src_attr.blank? || dst_attr.blank?
       src_val = @src.send(src_attr)
       dst_val = @dst.send(dst_attr)
-      if (!src_val.blank? && !dst_val.blank?) && (src_val != src_val)
+      if !(src_val.blank? && dst_val.blank?) && (src_val != dst_val)
         puts "#{description} attrs don't match! #{src_attr} != #{dst_attr} ('#{src_val}' != '#{dst_val}')"
         false
       else
