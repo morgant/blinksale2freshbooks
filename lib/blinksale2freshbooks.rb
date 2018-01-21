@@ -4,6 +4,7 @@ require "active_support/core_ext/object/blank"
 require "blinksale2freshbooks/version"
 require "blinksale2freshbooks/config"
 require "blinksale2freshbooks/migration"
+require "blinksale2freshbooks/person_migration"
 require "blinksale/blinksale"
 require "freshbooks/freshbooks"
 
@@ -78,40 +79,6 @@ module Blinksale2FreshBooks
     end
   end
 
-  def self.compare_blinksale_person_to_freshbooks_client(bs_person, fb_client)
-    match = true
-
-    # compare attrs between Blinksale Person & FreshBooks Client objects
-    person = Blinksale2FreshBooks::Migration.new(bs_person, fb_client)
-    person.add_attr_association("First Name", "first_name", "fname")
-    person.add_attr_association("Last Name", "last_name", "lname")
-    person.add_attr_association("Email", "email")
-    person.add_attr_association("Business Phone", "phone_office", "bus_phone")
-    person.add_attr_association("Mobile Phone", "phone_mobile", "mob_phone")
-    if !person.same?
-      puts "\t\t\t\tPerson attributes differ!"
-      match = false
-    end
-    
-    # compare attrs between  Blinksale Client & FreshBooks Client objects
-    bs_client = bs_person.parent.parent
-    company = Blinksale2FreshBooks::Migration.new(bs_client, fb_client)
-    company.add_attr_association("Organization Name", "name", "organization")
-    company.add_attr_association("Street Address (Line 1)", "address1", "p_street")
-    company.add_attr_association("Street Address (Line 2)", "address2", "p_street2")
-    company.add_attr_association("City", "city", "p_city")
-    company.add_attr_association("State", "state", "p_province")
-    company.add_attr_association("Postal Code", "zip", "p_code")
-    company.add_attr_association("Country", "country", "p_country")
-    company.add_attr_association("Fax", "fax")
-    if !company.same?
-      puts "\t\t\t\tCompany/Organization attributes differ!"
-      match = false
-    end
-    
-    match
-  end
-
   def self.compare_blinksale_invoice_to_freshbooks_invoice(bs_invoice, fb_invoice)
     match = true
 
@@ -147,29 +114,6 @@ module Blinksale2FreshBooks
     match
   end
 
-  def self.create_freshbooks_client_from_blinksale_person(bs_person)
-    bs_client = bs_person.parent.parent
-    @freshbooks.clients.new({
-      client: {
-        # equivalent to Blinksale "person" data:
-        fname: bs_person.first_name,
-        lname: bs_person.last_name,
-        email: bs_person.email,
-        bus_phone: bs_person.phone_office,  # note: may need to better handle whether to use person.phone_office or client.phone
-        mob_phone: bs_person.phone_mobile,
-        # equivalent to Blinksale "client" data:
-        organization: bs_client.name,
-        p_street: bs_client.address1,
-        p_street2: bs_client.address2,
-        p_city: bs_client.city,
-        p_province: bs_client.state,
-        p_code: bs_client.zip,
-        p_country: bs_client.country,
-        fax: bs_client.fax
-      }
-    }.to_json)
-  end
-
   def self.create_freshbooks_invoice_from_blinksale_invoice(bs_invoice)
     bs_client = @blinksale.clients.detect {|client| client.url == bs_invoice.client}
     fb_client = find_freshbooks_clients_by_blinksale_client(bs_client).first
@@ -195,26 +139,6 @@ module Blinksale2FreshBooks
         notes: bs_invoice.notes
       }
     }.to_json)
-  end
-
-  def self.update_freshbooks_client_with_blinksale_person(fb_client, bs_person)
-    bs_client = bs_person.parent.parent
-    # equivalent to BlinkSale "person" data:
-    fb_client.fname = bs_person.first_name
-    fb_client.lname = bs_person.last_name
-    fb_client.email = bs_person.email
-    fb_client.bus_phone = bs_person.phone_office  # note: may need to better handle whether to use person.phone_office or client.phone
-    fb_client.mob_phone = bs_person.phone_mobile
-    # equivalent to BlinkSale "client" data:
-    fb_client.organization = bs_client.name
-    fb_client.p_street = bs_client.address1
-    fb_client.p_street2 = bs_client.address2
-    fb_client.p_city = bs_client.city
-    fb_client.p_province = bs_client.state
-    fb_client.p_code = bs_client.zip
-    fb_client.p_country = bs_client.country
-    fb_client.fax = bs_client.fax
-    fb_client
   end
 
   def self.update_freshbooks_invoice_with_blinksale_invoice(fb_invoice, bs_invoice)
@@ -259,26 +183,25 @@ module Blinksale2FreshBooks
     if client.people.length > 0
       puts "\t\tPeople:"
       client.people.each do |person|
-        puts "\t\t#{person.first_name} #{person.last_name}..."
+        migration = Blinksale2FreshBooks::PersonMigration.new(@blinksale, @freshbooks, person)
+        puts "\t\t#{migration.name}..."
         fb_clients = @freshbooks.clients(email: person.email)
-        if !fb_clients.nil? && fb_clients.length > 0
+        if !migration.needs_creation?
           puts "\t\t\tAlready exists."
-          fb_clients.each do |fb_client|
-            if compare_blinksale_person_to_freshbooks_client(person, fb_client)
-              puts "\t\t\tMatches."
-            else
-              puts "\t\t\tDiffers. Updating..."
-              fb_client = update_freshbooks_client_with_blinksale_person(fb_client, person)
-              unless dry_run
-                fb_client.save
-              end
+          if !migration.needs_update?
+            puts "\t\t\tMatches."
+          else
+            puts "\t\t\tDiffers. Updating..."
+            migration.update
+            unless dry_run
+              migration.freshbooks_client.save
             end
           end
         else
           puts "\t\t\tCreating #{dry_run ? "(not really)" : ""}..."
-          new_client = create_freshbooks_client_from_blinksale_person(person)
+          migration.create
           unless dry_run || new_client.nil?
-            new_client.save
+            migration.freshbooks_client.save
           end
         end
       end
