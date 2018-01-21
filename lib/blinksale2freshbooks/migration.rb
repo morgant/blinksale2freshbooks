@@ -24,7 +24,7 @@ module Blinksale2FreshBooks
     end
 
     def same?
-      no_match = @attrs.detect {|f| !attrs_match?(f[:src], f[:dst], f[:desc])}
+      no_match = @attrs.detect {|attr| !attrs_match?(attr[:src], attr[:dst], attr[:desc])}
       no_match.nil?
     end
 
@@ -34,11 +34,11 @@ module Blinksale2FreshBooks
       raise ArgumentError if src_attr.blank? || dst_attr.blank?
       src_val = @src.send(src_attr)
       dst_val = @dst.send(dst_attr)
-      if !(src_val.blank? && dst_val.blank?) && (src_val != src_val)
-        puts "#{description} attrs don't match! #{src_attr} != #{dst_attr} ('#{src_val}' != '#{dst_val}')
+      if (!src_val.blank? && !dst_val.blank?) && (src_val != src_val)
+        puts "#{description} attrs don't match! #{src_attr} != #{dst_attr} ('#{src_val}' != '#{dst_val}')"
         false
       else
-        puts "#{description} attrs match. #{src_attr} != #{dst_attr} ('#{src_val}' == '#{dst_val}')
+        #puts "#{description} attrs match. #{src_attr} == #{dst_attr} ('#{src_val}' == '#{dst_val}')"
         true
       end
     end
