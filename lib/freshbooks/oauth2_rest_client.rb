@@ -16,22 +16,27 @@ module REST
     def self.unserialize(data, media_type)
       #puts "media_type: #{media_type}"
       if media_type.downcase == "application/json"
+        json_key = nil
         json_data = JSON.parse(data)
         if json_data.key?("response") && json_data["response"].key?("result")
           #puts "data[response][result]: #{json_data['response']['result']}"
-          json_data = json_data["response"]["result"].find {|k, v| v.is_a?(Array) || v.is_a?(Hash)}[1]
+          json_key, json_data = json_data["response"]["result"].find {|k, v| v.is_a?(Array) || v.is_a?(Hash)}
         elsif json_data.key?("response")
           #puts "data[response]: #{json_data['response']}"
           json_data = json_data["response"]
         end
-        json_data
+        [json_key, json_data]
       else
         XmlNode.from_xml(data)
       end
     end
 
-    def self.serialize(document)
-      document.is_a?(XmlNode) ? document.to_s : document.to_json
+    def self.serialize(document, key = nil)
+      if document.is_a?(XmlNode)
+        document.to_s
+      else
+        (key.nil?) ? document.to_json : { key => document }.to_json
+      end
     end
     
     def get(name)
@@ -60,15 +65,22 @@ module REST
     end
     
     def document
-      @document ||= self.class.unserialize(data, @client.media_type)
+      unless @document
+        @document = self.class.unserialize(data, @client.media_type)
+        @key, @document = @document[0], @document[1] if @client.media_type == "application/json"
+      end
+      @document
     end
-    
+
+    def serialized; self.class.serialize(document, (@client.media_type == "application/json") ? @key : nil); end
+
     def create
       response = @client.post @parent.path, serialized, :expected_response => 200
       if @client.media_type.downcase == "application/json"
+        @key = nil
         json_data = JSON.parse(response.body)
         if json_data.key?("response") && json_data["response"].key?("result")
-          json_data = json_data["response"]["result"].find {|k, v| v.is_a?(Array) || v.is_a?(Hash)}[1]
+          @key, json_data = json_data["response"]["result"].find {|k, v| v.is_a?(Array) || v.is_a?(Hash)}#[1]
         elsif json_data.key?("response")
           json_data = json_data["response"]
         end
